@@ -66,16 +66,6 @@ interface CurvePool:
         _A: uint256,
         _fee: uint256,
     ): nonpayable
-    ## below is for MetaImplementationUSD
-    # def initialize(
-    #     _name: String[32],
-    #     _symbol: String[10],
-    #     _coin: address,
-    #     _decimals: uint256,
-    #     _A: uint256,
-    #     _fee: uint256,
-    #     _admin: address,
-    # ): nonpayable
     def exchange(
         i: int128,
         j: int128,
@@ -675,9 +665,6 @@ def deploy_metapool(
 
     pool: address = create_forwarder_to(implementation)
     log CallTracer(2)
-    ### this will not work cos CurvePool interface orginally declared in Facotry.vy has different initialize() mothod signature than MetaImplementationUSD
-    ### CurvePool(pool).initialize(_name, _symbol, _coin, 10 ** (36 - decimals), _A, _fee)
-    # CurvePool(pool).initialize(_name, _symbol, _coin, decimals, _A, _fee, self.admin) # for old(?) impl MetaImplementaionUSD
     CurvePool(pool).initialize(_name, _symbol, _coin, 10 ** (36 - decimals), _A, _fee)
     log CallTracer(3)
     ERC20(_coin).approve(pool, MAX_UINT256)

@@ -3,7 +3,7 @@ from brownie import (
     DepositZapUSD,
     Factory,
     # MetaImplementationBTC,
-    MetaImplementationUSD,
+    #MetaImplementationUSD,
     MetaUSDBalances, # this should be used, remove reference to MetaImplementationUSD
     OwnerProxy,
     accounts,
@@ -50,7 +50,6 @@ def main(deployer=DEPLOYER):
     # factory = Factory.deploy({"from": deployer})
     factory = Factory.deploy(FEE_RECEIVER_USD, _tx_params()) # had to fix it, missing fee receiver address in constructor params
 
-    # implementation_usd = MetaImplementationUSD.deploy({"from": deployer}) # had to remove gas_price param - Vyper error : ValueError: Expecting value: line 1 column 1 (char 0)
     implementation_usd = MetaUSDBalances.deploy(_tx_params()) # had to remove gas_price param - Vyper error : ValueError: Expecting value: line 1 column 1 (char 0)
     factory.add_base_pool(
         # BASE_3POOL, implementation_usd, FEE_RECEIVER_USD, {"from": deployer, "gas_price": gas_price}
