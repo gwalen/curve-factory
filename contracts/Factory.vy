@@ -105,11 +105,27 @@ event LiquidityGaugeDeployed:
     pool: address
     gauge: address
 
+event CallTracer:
+    idx: uint256
+
 
 MAX_COINS: constant(int128) = 8
 MAX_PLAIN_COINS: constant(int128) = 4  # max coins in a plain pool
 ADDRESS_PROVIDER: constant(address) = 0x0000000022D53366457F9d5E68Ec105046FC4383
 OLD_FACTORY: constant(address) = 0x0959158b6040D32d04c301A72CBFD6b39E21c9AE
+
+#Base pool in this case is 3pool
+# BASEPOOL_LP_TOKEN_3CRV: constant(address) = 0x9A676e781A523b5d0C0e43731313A708CB607508 # local network
+BASEPOOL_LP_TOKEN_3CRV: constant(address) = 0x9B19C4CA339DA7fd81FCb2F6eA55062107b8966b   # rinkeby
+BASEPOOL_N_COINS: constant(int128) = 3
+BASE_COINS: constant(address[3]) = [
+    # 0x5FbDB2315678afecb367f032d93F642f64180aa3,  # DAI # local network
+    0xF86176aF4687a9E65177913Ebe0A333D79E19fF4,  # DAI
+    # 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512,  # USDC # local network
+    0x28D0C916Df5bDBB6636b90E25A97363d009eF7e0,  # USDC
+    # 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0,  # USDT # local network
+    0x9BcB3F98236eE1eFB9455637Fa69E2BE27963725,  # USDT
+]
 
 admin: public(address)
 future_admin: public(address)
@@ -641,14 +657,18 @@ def deploy_metapool(
 
     implementation: address = self.base_pool_data[_base_pool].implementations[_implementation_idx]
     assert implementation != ZERO_ADDRESS, "Invalid implementation index"
+    log CallTracer(1)
 
     # things break if a token has >18 decimals
     decimals: uint256 = ERC20(_coin).decimals()
     assert decimals < 19, "Max 18 decimals for coins"
 
     pool: address = create_forwarder_to(implementation)
+    log CallTracer(2)
     CurvePool(pool).initialize(_name, _symbol, _coin, 10 ** (36 - decimals), _A, _fee)
+    log CallTracer(3)
     ERC20(_coin).approve(pool, MAX_UINT256)
+    log CallTracer(4)
 
     # add pool to pool_list
     length: uint256 = self.pool_count
@@ -709,7 +729,8 @@ def add_base_pool(
     _base_pool: address,
     _fee_receiver: address,
     _asset_type: uint256,
-    _implementations: address[10],
+    # _implementations: address[10],
+    _implementations: address[1], # had to change to 1 so I can just pass one meta implementation
 ):
     """
     @notice Add a base pool to the registry, which may be used in factory metapools
@@ -722,28 +743,32 @@ def add_base_pool(
     assert msg.sender == self.admin  # dev: admin-only function
     assert self.base_pool_data[_base_pool].coins[0] == ZERO_ADDRESS  # dev: pool exists
 
-    registry: address = AddressProvider(ADDRESS_PROVIDER).get_registry()
-    n_coins: uint256 = Registry(registry).get_n_coins(_base_pool)
+    # registry: address = AddressProvider(ADDRESS_PROVIDER).get_registry() # not needed for development deployment
+    # n_coins: uint256 = Registry(registry).get_n_coins(_base_pool)
+    n_coins: uint256 = BASEPOOL_N_COINS
     assert n_coins > 0  # dev: pool not in registry
 
     # add pool to pool_list
     length: uint256 = self.base_pool_count
     self.base_pool_list[length] = _base_pool
     self.base_pool_count = length + 1
-    self.base_pool_data[_base_pool].lp_token = Registry(registry).get_lp_token(_base_pool)
+    # self.base_pool_data[_base_pool].lp_token = Registry(registry).get_lp_token(_base_pool)
+    self.base_pool_data[_base_pool].lp_token = BASEPOOL_LP_TOKEN_3CRV # avoid using registry for development deployment
     self.base_pool_data[_base_pool].n_coins = n_coins
     self.base_pool_data[_base_pool].fee_receiver = _fee_receiver
     if _asset_type != 0:
         self.base_pool_data[_base_pool].asset_type = _asset_type
 
-    for i in range(10):
+    # for i in range(10):
+    for i in range(1): # had to change to 1 so I can just pass one meta implementation
         implementation: address = _implementations[i]
         if implementation == ZERO_ADDRESS:
             break
         self.base_pool_data[_base_pool].implementations[i] = implementation
 
     decimals: uint256 = 0
-    coins: address[MAX_COINS] = Registry(registry).get_coins(_base_pool)
+    # coins: address[MAX_COINS] = Registry(registry).get_coins(_base_pool)
+    coins: address[BASEPOOL_N_COINS] = BASE_COINS
     for i in range(MAX_COINS):
         if i == n_coins:
             break
